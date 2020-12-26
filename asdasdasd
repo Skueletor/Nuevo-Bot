@@ -1,0 +1,507 @@
+const { exec } = require('child_process');
+const fs = require('fs');
+
+function isJSONString(string) {
+	try {
+		JSON.parse(string);
+		return true;
+	} catch (e) {
+		return false;
+	}
+}
+
+function userbot_Add(num, callback) {
+	exec('cd /root/tg-userbot/userbot_scripts && python3.5 CLIBot.py sendphonecode '+num, (error, out, errout) => {
+		const response = JSON.parse(out.replace(/\n$/, ''));
+		if (response.ok) {
+			return callback(null, response.result.resp);
+		} else {
+			return callback(response);
+		}
+	});
+}
+
+function userbot_Confirm(num, code, num_hash, callback) {
+	exec('cd /root/tg-userbot/userbot_scripts && python3.5 CLIBot.py confirmphonecode '+num+' '+code+' '+num_hash, (error, out, errout) => {
+		const response = JSON.parse(out.replace(/\n$/, ''));
+		if (response.ok) {
+			return callback(null, 'ok');
+		} else {
+			return callback(response);
+		}
+	});
+}
+
+function userbot_Check(callback) {
+	var status = '';
+	var total_bots = 0;
+	var execd_bots = 0;
+	fs.readdir('/root/tg-userbot/userbot_scripts/sessions', (err, files) => {
+		if (!err) {
+			for (let i = 0; i < files.length; i++) {
+				if (files[i].includes('.session') && !files[i].includes('-journal')) {
+					total_bots++;
+				}
+			}
+			if (!total_bots) {
+				return callback('no-bots');
+			}
+			for (let i = 0; i < files.length; i++) {
+				if (files[i].includes('.session') && !files[i].includes('-journal')) {
+					let num = files[i].split('.session')[0];
+					exec('cd /root/tg-userbot/userbot_scripts && python3.5 CLIBot.py checkifwork '+num, (error, out, errout) => {
+						if (errout || error) {
+							status += '<code>+'+num+'</code> | ⛔️\n';
+						} else if (!out || !isJSONString(out)) {
+							status += '<code>+'+num+'</code> | ❓\n';
+						} else {
+							let response = JSON.parse(out.replace(/\n$/, ''));
+							if (response.ok) {
+								status += '<code>+'+num+'</code> | ✅\n';
+							} else if (!response.ok) {
+								status += '<code>+'+num+'</code> | ❌\n';
+							}
+						}
+						execd_bots++;
+						if (total_bots == execd_bots) {
+							return callback(null, status, execd_bots);
+						}
+					});
+				}
+			}
+		} else {
+			return callback('read-file-error');
+		}
+	});
+}
+
+function userbot_Join(join_group, callback) {
+	var join_group_parsed = '';
+	var status = '';
+	var total_bots = 0;
+	var execd_bots = 0;
+	if (join_group.startsWith('https://t.me/joinchat/')) {
+		join_group_parsed = join_group.replace('https://t.me/joinchat/', '');
+	} else if (join_group.startsWith('@')) {
+		join_group_parsed = join_group.replace('@', '');
+	} else {
+		return callback('join-group-invalid');
+	}
+	fs.readdir('/root/tg-userbot/userbot_scripts/sessions', (err, files) => {
+		if (!err) {
+			for (let i = 0; i < files.length; i++) {
+				if (files[i].includes('.session') && !files[i].includes('-journal')) {
+					total_bots++;
+				}
+			}
+			if (!total_bots) {
+				return callback('no-bots');
+			}
+			if (join_group.startsWith('https://t.me/joinchat/')) {
+				for (let i = 0; i < files.length; i++) {
+					if (files[i].includes('.session') && !files[i].includes('-journal')) {
+						let num = files[i].split('.session')[0];
+						exec('cd /root/tg-userbot/userbot_scripts && python3.5 CLIBot.py joinprivategroup '+num+' '+join_group_parsed, (error, out, errout) => {
+							if (errout || error) {
+								status += '<code>+'+num+'</code> | ⛔️\n';
+							} else if (!out || !isJSONString(out)) {
+								status += '<code>+'+num+'</code> | ❓\n';
+							} else {
+								let response = JSON.parse(out.replace(/\n$/, ''));
+								if (response.ok) {
+									status += '<code>+'+num+'</code> | ✅\n';
+								} else if (!response.ok) {
+									status += '<code>+'+num+'</code> | ❌\n';
+								}
+							}
+							execd_bots++;
+							if (total_bots == execd_bots) {
+								return callback(null, status, execd_bots);
+							}
+						});
+					}
+				}
+			} else if (join_group.startsWith('@')) {
+				for (let i = 0; i < files.length; i++) {
+					if (files[i].includes('.session') && !files[i].includes('-journal')) {
+						let num = files[i].split('.session')[0];
+						exec('cd /root/tg-userbot/userbot_scripts && python3.5 CLIBot.py joinpublicgroup '+num+' '+join_group_parsed, (error, out, errout) => {
+							if (errout || error) {
+								status += '<code>+'+num+'</code> | ⛔️\n';
+							} else if (!out || !isJSONString(out)) {
+								status += '<code>+'+num+'</code> | ❓\n';
+							} else {
+								let response = JSON.parse(out.replace(/\n$/, ''));
+								if (response.ok) {
+									status += '<code>+'+num+'</code> | ✅\n';
+								} else if (!response.ok) {
+									status += '<code>+'+num+'</code> | ❌\n';
+								}
+							}
+							execd_bots++;
+							if (total_bots == execd_bots) {
+								return callback(null, status, execd_bots);
+							}
+						});
+					}
+				}
+			}
+		} else {
+			return callback('read-file-error');
+		}
+	});
+}
+
+function userbot_Leave(leave_group, callback) {
+	var leave_group_parsed = '';
+	var status = '';
+	var total_bots = 0;
+	var execd_bots = 0;
+	if (leave_group.startsWith('https://t.me/joinchat/')) {
+		leave_group_parsed = leave_group.replace('https://t.me/joinchat/', '');
+	} else if (leave_group.startsWith('@')) {
+		leave_group_parsed = leave_group.replace('@', '');
+	} else {
+		return callback('leave-group-invalid');
+	}
+	fs.readdir('/root/tg-userbot/userbot_scripts/sessions', (err, files) => {
+		if (!err) {
+			for (let i = 0; i < files.length; i++) {
+				if (files[i].includes('.session') && !files[i].includes('-journal')) {
+					total_bots++;
+				}
+			}
+			if (!total_bots) {
+				return callback('no-bots');
+			}
+			if (leave_group.startsWith('https://t.me/joinchat/')) {
+				for (let i = 0; i < files.length; i++) {
+					if (files[i].includes('.session') && !files[i].includes('-journal')) {
+						let num = files[i].split('.session')[0];
+						exec('cd /root/tg-userbot/userbot_scripts && python3.5 CLIBot.py leaveprivategroup '+num+' '+leave_group_parsed, (error, out, errout) => {
+							if (errout || error) {
+								status += '<code>+'+num+'</code> | ⛔️\n';
+							} else if (!out || !isJSONString(out)) {
+								status += '<code>+'+num+'</code> | ❓\n';
+							} else {
+								let response = JSON.parse(out.replace(/\n$/, ''));
+								if (response.ok) {
+									status += '<code>+'+num+'</code> | ✅\n';
+								} else if (!response.ok) {
+									status += '<code>+'+num+'</code> | ❌\n';
+								}
+							}
+							execd_bots++;
+							if (total_bots == execd_bots) {
+								return callback(null, status, execd_bots);
+							}
+						});
+					}
+				}
+			} else if (leave_group.startsWith('@')) {
+				for (let i = 0; i < files.length; i++) {
+					if (files[i].includes('.session') && !files[i].includes('-journal')) {
+						let num = files[i].split('.session')[0];
+						exec('cd /root/tg-userbot/userbot_scripts && python3.5 CLIBot.py leavepublicgroup '+num+' '+leave_group_parsed, (error, out, errout) => {
+							if (errout || error) {
+								status += '<code>+'+num+'</code> | ⛔️\n';
+							} else if (!out || !isJSONString(out)) {
+								status += '<code>+'+num+'</code> | ❓\n';
+							} else {
+								let response = JSON.parse(out.replace(/\n$/, ''));
+								if (response.ok) {
+									status += '<code>+'+num+'</code> | ✅\n';
+								} else if (!response.ok) {
+									status += '<code>+'+num+'</code> | ❌\n';
+								}
+							}
+							execd_bots++;
+							if (total_bots == execd_bots) {
+								return callback(null, status, execd_bots);
+							}
+						});
+					}
+				}
+			}
+		} else {
+			return callback('read-file-error');
+		}
+	});
+}
+
+function userbot_Flood(flood_group, n_mess, text_message, callback) {
+	var flood_group_parsed = '';
+	var status = '';
+	var total_bots = 0;
+	var execd_bots = 0;
+	if (flood_group.startsWith('https://t.me/joinchat/')) {
+		flood_group_parsed = flood_group.replace('https://t.me/joinchat/', '');
+	} else if (flood_group.startsWith('@')) {
+		flood_group_parsed = flood_group.replace('@', '');
+	} else {
+		return callback('flood-group-invalid');
+	}
+	fs.readdir('/root/tg-userbot/userbot_scripts/sessions', (err, files) => {
+		if (!err) {
+			for (let i = 0; i < files.length; i++) {
+				if (files[i].includes('.session') && !files[i].includes('-journal')) {
+					total_bots++;
+				}
+			}
+			if (!total_bots) {
+				return callback('no-bots');
+			}
+			if (flood_group.startsWith('https://t.me/joinchat/')) {
+				for (let i = 0; i < files.length; i++) {
+					if (files[i].includes('.session') && !files[i].includes('-journal')) {
+						let num = files[i].split('.session')[0];
+						exec('cd /root/tg-userbot/userbot_scripts && python3.5 CLIBot.py floodprivategroup '+num+' '+flood_group_parsed+' '+n_mess+' '+text_message, (error, out, errout) => {
+							if (errout || error) {
+								status += '<code>+'+num+'</code> | ⛔️\n';
+							} else if (!out || !isJSONString(out)) {
+								status += '<code>+'+num+'</code> | ❓\n';
+							} else {
+								let response = JSON.parse(out.replace(/\n$/, ''));
+								if (response.ok) {
+									status += '<code>+'+num+'</code> | ✅\n';
+								} else if (!response.ok) {
+									status += '<code>+'+num+'</code> | ❌\n';
+								}
+							}
+							execd_bots++;
+							if (total_bots == execd_bots) {
+								return callback(null, status, execd_bots);
+							}
+						});
+					}
+				}
+			} else if (flood_group.startsWith('@')) {
+				for (let i = 0; i < files.length; i++) {
+					if (files[i].includes('.session') && !files[i].includes('-journal')) {
+						let num = files[i].split('.session')[0];
+						exec('cd /root/tg-userbot/userbot_scripts && python3.5 CLIBot.py floodpublicgroup '+num+' '+flood_group_parsed+' '+n_mess+' '+text_message, (error, out, errout) => {
+							if (errout || error) {
+								status += '<code>+'+num+'</code> | ⛔️\n';
+							} else if (!out || !isJSONString(out)) {
+								status += '<code>+'+num+'</code> | ❓\n';
+							} else {
+								let response = JSON.parse(out.replace(/\n$/, ''));
+								if (response.ok) {
+									status += '<code>+'+num+'</code> | ✅\n';
+								} else if (!response.ok) {
+									status += '<code>+'+num+'</code> | ❌\n';
+								}
+							}
+							execd_bots++;
+							if (total_bots == execd_bots) {
+								return callback(null, status, execd_bots);
+							}
+						});
+					}
+				}
+			}
+		} else {
+			return callback('read-file-error');
+		}
+	});
+}
+
+function userbot_Change(change_type, change_info, callback) {
+	var status = '';
+	var total_bots = 0;
+	var execd_bots = 0;
+	fs.readdir('/root/tg-userbot/userbot_scripts/sessions', (err, files) => {
+		if (!err) {
+			for (let i = 0; i < files.length; i++) {
+				if (files[i].includes('.session') && !files[i].includes('-journal')) {
+					total_bots++;
+				}
+			}
+			if (!total_bots) {
+				return callback('no-bots');
+			}
+			
+			if (change_type == 'propic') {
+				for (let i = 0; i < files.length; i++) {
+					if (files[i].includes('.session') && !files[i].includes('-journal')) {
+						let num = files[i].split('.session')[0];
+						exec('cd /root/tg-userbot/userbot_scripts && python3.5 CLIBot.py updatepic '+num+' propic_files/'+change_info, (error, out, errout) => {
+							if (errout || error) {
+								status += '<code>+'+num+'</code> | ⛔️\n';
+							} else if (!out || !isJSONString(out)) {
+								status += '<code>+'+num+'</code> | ❓\n';
+							} else {
+								let response = JSON.parse(out.replace(/\n$/, ''));
+								if (response.ok) {
+									status += '<code>+'+num+'</code> | ✅\n';
+								} else if (!response.ok) {
+									status += '<code>+'+num+'</code> | ❌\n';
+								}
+							}
+							execd_bots++;
+							if (total_bots == execd_bots) {
+								return callback(null, status, execd_bots);
+							}
+						});
+					}
+				}
+			} else {
+				for (let i = 0; i < files.length; i++) {
+					if (files[i].includes('.session') && !files[i].includes('-journal')) {
+						let num = files[i].split('.session')[0];
+						exec('cd /root/tg-userbot/userbot_scripts && python3.5 CLIBot.py changeprofileinfo '+num+' '+change_type+' '+change_info, (error, out, errout) => {
+							if (errout || error) {
+								status += '<code>+'+num+'</code> | ⛔️\n';
+							} else if (!out || !isJSONString(out)) {
+								status += '<code>+'+num+'</code> | ❓\n';
+							} else {
+								let response = JSON.parse(out.replace(/\n$/, ''));
+								if (response.ok) {
+									status += '<code>+'+num+'</code> | ✅\n';
+								} else if (!response.ok) {
+									status += '<code>+'+num+'</code> | ❌\n';
+								}
+							}
+							execd_bots++;
+							if (total_bots == execd_bots) {
+								return callback(null, status, execd_bots);
+							}
+						});
+					}
+				}
+			}
+		} else {
+			return callback('read-file-error');
+		}
+	});
+}
+
+function userbot_FwdFlood(from_channel, to_group, n_mess, callback) {
+	var flood_group_parsed = '';
+	var status = '';
+	var total_bots = 0;
+	var execd_bots = 0;
+	if (to_group.startsWith('https://t.me/joinchat/')) {
+		flood_group_parsed = to_group.replace('https://t.me/joinchat/', '');
+	} else if (to_group.startsWith('@')) {
+		flood_group_parsed = to_group.replace('@', '');
+	} else {
+		return callback('flood-group-invalid');
+	}
+	fs.readdir('/root/tg-userbot/userbot_scripts/sessions', (err, files) => {
+		if (!err) {
+			for (let i = 0; i < files.length; i++) {
+				if (files[i].includes('.session') && !files[i].includes('-journal')) {
+					total_bots++;
+				}
+			}
+			if (!total_bots) {
+				return callback('no-bots');
+			}
+			if (to_group.startsWith('https://t.me/joinchat/')) {
+				for (let i = 0; i < files.length; i++) {
+					if (files[i].includes('.session') && !files[i].includes('-journal')) {
+						let num = files[i].split('.session')[0];
+						exec('cd /root/tg-userbot/userbot_scripts && python3.5 CLIBot.py fwdfloodprivategroup '+num+' '+from_channel+' '+flood_group_parsed+' '+n_mess, (error, out, errout) => {
+							if (errout || error) {
+								status += '<code>+'+num+'</code> | ⛔️\n';
+							} else if (!out || !isJSONString(out)) {
+								status += '<code>+'+num+'</code> | ❓\n';
+							} else {
+								let response = JSON.parse(out.replace(/\n$/, ''));
+								if (response.ok) {
+									status += '<code>+'+num+'</code> | ✅\n';
+								} else if (!response.ok) {
+									status += '<code>+'+num+'</code> | ❌\n';
+								}
+							}
+							execd_bots++;
+							if (total_bots == execd_bots) {
+								return callback(null, status, execd_bots);
+							}
+						});
+					}
+				}
+			} else if (to_group.startsWith('@')) {
+				for (let i = 0; i < files.length; i++) {
+					if (files[i].includes('.session') && !files[i].includes('-journal')) {
+						let num = files[i].split('.session')[0];
+						exec('cd /root/tg-userbot/userbot_scripts && python3.5 CLIBot.py fwdfloodpublicgroup '+num+' '+from_channel+' '+flood_group_parsed+' '+n_mess, (error, out, errout) => {
+							if (errout || error) {
+								status += '<code>+'+num+'</code> | ⛔️\n';
+							} else if (!out || !isJSONString(out)) {
+								status += '<code>+'+num+'</code> | ❓\n';
+							} else {
+								let response = JSON.parse(out.replace(/\n$/, ''));
+								if (response.ok) {
+									status += '<code>+'+num+'</code> | ✅\n';
+								} else if (!response.ok) {
+									status += '<code>+'+num+'</code> | ❌\n';
+								}
+							}
+							execd_bots++;
+							if (total_bots == execd_bots) {
+								return callback(null, status, execd_bots);
+							}
+						});
+					}
+				}
+			}
+		} else {
+			return callback('read-file-error');
+		}
+	});
+}
+
+function userbot_LimitedCheck(callback) {
+	var status = '';
+	var total_bots = 0;
+	var execd_bots = 0;
+	fs.readdir('/root/tg-userbot/userbot_scripts/sessions', (err, files) => {
+		if (!err) {
+			for (let i = 0; i < files.length; i++) {
+				if (files[i].includes('.session') && !files[i].includes('-journal')) {
+					total_bots++;
+				}
+			}
+			if (!total_bots) {
+				return callback('no-bots');
+			}
+			for (let i = 0; i < files.length; i++) {
+				if (files[i].includes('.session') && !files[i].includes('-journal')) {
+					let num = files[i].split('.session')[0];
+					exec('cd /root/tg-userbot/userbot_scripts && python3.5 CLIBot.py checkiflimited '+num, (error, out, errout) => {
+						if (errout || error) {
+							status += '<code>+'+num+'</code> | ⛔️\n';
+						} else if (!out || !isJSONString(out)) {
+							status += '<code>+'+num+'</code> | ❓\n';
+						} else {
+							let response = JSON.parse(out.replace(/\n$/, ''));
+							if (response.result.resp == 'Bot is not limited') {
+								status += '<code>+'+num+'</code> | ✅\n';
+							} else if (response.result.resp == 'Bot is limited') {
+								status += '<code>+'+num+'</code> | ❌\n';
+							}
+						}
+						execd_bots++;
+						if (total_bots == execd_bots) {
+							return callback(null, status, execd_bots);
+						}
+					});
+				}
+			}
+		} else {
+			return callback('read-file-error');
+		}
+	});
+}
+
+module.exports.add = userbot_Add;
+module.exports.confirm = userbot_Confirm;
+module.exports.check = userbot_Check;
+module.exports.limitedCheck = userbot_LimitedCheck;
+module.exports.join = userbot_Join;
+module.exports.leave = userbot_Leave;
+module.exports.flood = userbot_Flood;
+module.exports.fwdFlood = userbot_FwdFlood;
+module.exports.change = userbot_Change;
